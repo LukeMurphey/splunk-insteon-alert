@@ -1,0 +1,24 @@
+<form class="form-horizontal form-complex">
+    <div class="control-group">
+        <label class="control-label" for="send_insteon_command_device">Device</label>
+
+        <div class="controls">
+            <input type="text" name="action.send_insteon_command.param.device" id="send_insteon_command_device" />
+            <span class="help-block">The device to send the command to</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="send_insteon_command_command">Command</label>
+
+        <div class="controls">
+            <select name="action.send_insteon_command.param.command" id="send_insteon_command_command" >
+			  <option value="11">On</option>
+			  <option value="12">Fast On</option>
+			  <option value="13">Off</option>
+			  <option value="14">Fast Off</option>
+			  <option value="15">Status</option>
+			</select>
+            <span class="help-block">The command to send</span>
+        </div>
+    </div>
+</form>
