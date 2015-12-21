@@ -74,13 +74,36 @@ class InsteonDeviceField(Field):
         
         v = Field.to_python(self, value)
         
-        match = re.match("^([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})$", value.strip())
+        return InsteonDeviceField.normalize_device_id(v)
+        
+    @staticmethod
+    def normalize_device_id(device):
+        
+        match = re.match("^([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})$", device.strip())
         
         if match is None:
-            raise FieldValidationException("This is not a recognized Insteon device (should be in the format \"56:78:9A\")")
+            raise FieldValidationException(str(device) + " is not a recognized Insteon device (should be in the format \"56:78:9A\")")
         else:
             return (match.group(1) + match.group(2) + match.group(3)).upper()
         
+        
+            
+class InsteonMultipleDeviceField(Field):
+    """
+    Represents a series of Insteon devices in the various supported formats and converts the device names to a standard output with all uppercase and no separating characters (e.g. "1234ab")
+    """
+    
+    def to_python(self, value):
+        
+        v = Field.to_python(self, value)
+        
+        devices = []
+        
+        for device in v.split(","):
+            devices.append(InsteonDeviceField.normalize_device_id(device))
+            
+        # Return the devices while removing duplicates
+        return set(devices)
     
 
 class SendInsteonCommandAlert(ModularAlert):
@@ -103,7 +126,7 @@ class SendInsteonCommandAlert(ModularAlert):
                     
                     # The command to send
                     InsteonCommandField("command", empty_allowed=False, none_allowed=False),
-                    InsteonDeviceField("device", empty_allowed=False, none_allowed=False)
+                    InsteonMultipleDeviceField("device", empty_allowed=False, none_allowed=False)
         ]
         
         ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.DEBUG )

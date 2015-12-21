@@ -10,7 +10,7 @@ from StringIO import StringIO
 
 sys.path.append( os.path.join("..", "src", "bin") )
 
-from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField
+from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField
 from insteon_alert_app.modular_alert import ModularAlert, Field, BooleanField, FieldValidationException
 
 class FakeInputStream:
@@ -262,6 +262,35 @@ class InsteonDeviceFieldTest(unittest.TestCase):
         # Non-hex characters
         with self.assertRaises(FieldValidationException) as context:
             device_field.to_python('56:78:9g')
+            
+class InsteonMultipleDeviceFieldTest(unittest.TestCase):
+    """
+    Test the InsteonMultipleDeviceField that is used to normalize Insteon device IDs.
+    """
+    
+    def test_validate_good_input(self):
+        devices_field = InsteonMultipleDeviceField('device')
+        
+        # Good input
+        self.assertEqual(devices_field.to_python('56:78:9a,56:78:9a'), set(['56789A']))
+        self.assertEqual(devices_field.to_python('56:78:9A'), set(['56789A']))
+        self.assertEqual(len(devices_field.to_python('56-78-9f,56-78-9a')), 2)
+        
+    def test_validate_bad_input(self):
+        devices_field = InsteonMultipleDeviceField('device')
+        
+        # Not long enough
+        with self.assertRaises(FieldValidationException) as context:
+            devices_field.to_python('56:78:9')
+            
+        # Too long
+        with self.assertRaises(FieldValidationException) as context:
+            devices_field.to_python('56:78:9a,56:78:9a1')
+            
+        # Non-hex characters
+        with self.assertRaises(FieldValidationException) as context:
+            devices_field.to_python('56:78:9g')
+        
         
 if __name__ == "__main__":
     loader = unittest.TestLoader()
@@ -270,6 +299,6 @@ if __name__ == "__main__":
     suites.append(loader.loadTestsFromTestCase(SendInsteonCommandAlertTest))
     suites.append(loader.loadTestsFromTestCase(InsteonCommandFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonDeviceFieldTest))
-    
+    suites.append(loader.loadTestsFromTestCase(InsteonMultipleDeviceFieldTest))
     
     unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(suites))
