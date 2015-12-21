@@ -10,7 +10,7 @@ from StringIO import StringIO
 
 sys.path.append( os.path.join("..", "src", "bin") )
 
-from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert
+from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField
 from insteon_alert_app.modular_alert import ModularAlert, Field, BooleanField, FieldValidationException
 
 class FakeInputStream:
@@ -230,6 +230,38 @@ class InsteonCommandFieldTest(unittest.TestCase):
             ic_field.to_python('self_destruct')
         
         
+class InsteonDeviceFieldTest(unittest.TestCase):
+    """
+    Test the InsteonDeviceField that is used to normalize an Insteon device ID.
+    """
+    
+    def test_validate_good_input(self):
+        device_field = InsteonDeviceField('device')
+        
+        # Good input
+        self.assertEqual(device_field.to_python('56:78:9a'), '56789A')
+        self.assertEqual(device_field.to_python('56:78:9A'), '56789A')
+        self.assertEqual(device_field.to_python('56-78-9f'), '56789F')
+        self.assertEqual(device_field.to_python('56.78.9f'), '56789F')
+        self.assertEqual(device_field.to_python('56789f'), '56789F')
+        self.assertEqual(device_field.to_python('56.789f'), '56789F')
+        self.assertEqual(device_field.to_python('56.789f '), '56789F')
+        self.assertEqual(device_field.to_python(' 56.789f'), '56789F')
+        
+    def test_validate_bad_input(self):
+        device_field = InsteonDeviceField('device')
+        
+        # Not long enough
+        with self.assertRaises(FieldValidationException) as context:
+            device_field.to_python('56:78:9')
+            
+        # Too long
+        with self.assertRaises(FieldValidationException) as context:
+            device_field.to_python('56:78:9a1')
+            
+        # Non-hex characters
+        with self.assertRaises(FieldValidationException) as context:
+            device_field.to_python('56:78:9g')
         
 if __name__ == "__main__":
     loader = unittest.TestLoader()
@@ -237,5 +269,7 @@ if __name__ == "__main__":
     suites.append(loader.loadTestsFromTestCase(ModularAlertTest))
     suites.append(loader.loadTestsFromTestCase(SendInsteonCommandAlertTest))
     suites.append(loader.loadTestsFromTestCase(InsteonCommandFieldTest))
+    suites.append(loader.loadTestsFromTestCase(InsteonDeviceFieldTest))
+    
     
     unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(suites))

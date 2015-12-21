@@ -3,6 +3,7 @@ import json
 import logging
 import httplib2
 import time
+import re
 
 from insteon_alert_app.modular_alert import ModularAlert, Field, PortField, FieldValidationException
 
@@ -63,6 +64,24 @@ class InsteonCommandField(Field):
                     'times' : command_data[3]
                     }
             """
+            
+class InsteonDeviceField(Field):
+    """
+    Represents an Insteon device in the various supported formats and converts the device name to a standard output with all uppercase and no separating characters (e.g. "1234ab")
+    """
+    
+    def to_python(self, value):
+        
+        v = Field.to_python(self, value)
+        
+        match = re.match("^([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})$", value.strip())
+        
+        if match is None:
+            raise FieldValidationException("This is not a recognized Insteon device (should be in the format \"56:78:9A\")")
+        else:
+            return (match.group(1) + match.group(2) + match.group(3)).upper()
+        
+    
 
 class SendInsteonCommandAlert(ModularAlert):
     """
@@ -70,7 +89,7 @@ class SendInsteonCommandAlert(ModularAlert):
     """
     
     # This indicates how long to wait between each call when a command is supposed to be called several times
-    SLEEP_BETWEEN_CALL_DURATION = 0.5
+    SLEEP_BETWEEN_CALL_DURATION = 1.0
     
     def __init__(self, **kwargs):
         params = [
@@ -84,7 +103,7 @@ class SendInsteonCommandAlert(ModularAlert):
                     
                     # The command to send
                     InsteonCommandField("command", empty_allowed=False, none_allowed=False),
-                    Field("device", empty_allowed=False, none_allowed=False)
+                    InsteonDeviceField("device", empty_allowed=False, none_allowed=False)
         ]
         
         ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.DEBUG )
