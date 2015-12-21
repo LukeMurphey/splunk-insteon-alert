@@ -5,7 +5,7 @@ import httplib2
 import time
 import re
 
-from insteon_alert_app.modular_alert import ModularAlert, Field, PortField, FieldValidationException
+from insteon_alert_app.modular_alert import ModularAlert, Field, IPAddressField, PortField, FieldValidationException
 
 class InsteonCommandField(Field):
     """
@@ -117,7 +117,7 @@ class SendInsteonCommandAlert(ModularAlert):
     def __init__(self, **kwargs):
         params = [
                     # Fields to identify the hub to connect to
-                    Field("address", empty_allowed=False, none_allowed=False),
+                    IPAddressField("address", empty_allowed=False, none_allowed=False),
                     PortField("port", empty_allowed=False, none_allowed=False),
                     
                     # Authentication data for authenticating to the hub
@@ -140,7 +140,7 @@ class SendInsteonCommandAlert(ModularAlert):
         port -- The port of the Insteon Hub web-server
         username -- The username to authenticate to the Insteon Hub
         password -- The password to authenticate to the Insteon Hub
-        device -- The device to send the command to
+        device -- The devices to send the command to
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
         out_stream -- The output stream to send response messages to
@@ -208,11 +208,13 @@ class SendInsteonCommandAlert(ModularAlert):
         password = cleaned_params.get('password', None)
         username = cleaned_params.get('username', None)
         
-        device = cleaned_params.get('device', None)
+        devices = cleaned_params.get('device', None)
         command = cleaned_params.get('command', None)
         
         # Call the API the number of times requested
-        self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times)
+        for device in devices:
+            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times)
+            time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
         
 """
 If the script is being called directly from the command-line, then this is likely being executed by Splunk.

@@ -5,6 +5,7 @@ import sys
 import re
 import os
 import json
+import socket # Used for IP Address validation
 
 from splunk.appserver.mrsparkle.lib.util import make_splunkhome_path
 
@@ -322,6 +323,20 @@ class PortField(IntegerField):
             raise FieldValidationException("Port must be at least 0 and less than 65536")
         else:
             return v
+        
+class IPAddressField(Field):
+    
+    def to_python(self, value):
+        
+        v = Field.to_python(self, value)
+        
+        try:
+            socket.inet_aton(v)
+            return v
+        except socket.error:
+            # Not legal
+            raise FieldValidationException('This IP is not a valid address, value="' + v + '"')
+        
 
 class ModularAlert():
     

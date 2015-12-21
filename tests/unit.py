@@ -11,7 +11,7 @@ from StringIO import StringIO
 sys.path.append( os.path.join("..", "src", "bin") )
 
 from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField
-from insteon_alert_app.modular_alert import ModularAlert, Field, BooleanField, FieldValidationException
+from insteon_alert_app.modular_alert import ModularAlert, Field, BooleanField, IPAddressField, FieldValidationException
 
 class FakeInputStream:
     """
@@ -99,6 +99,31 @@ class ModularAlertTest(unittest.TestCase):
         test_instance.execute(in_stream, out_stream)
         
         self.assertEquals( len(re.findall("Alert ran successfully", out_stream.getvalue())), 1)
+        
+class IPAddressFieldTest(unittest.TestCase):
+    
+    def test_validate_good_input(self):
+        field = IPAddressField('device')
+        
+        # Good input
+        self.assertEqual(field.to_python('192.168.4.1'), '192.168.4.1')
+        self.assertEqual(field.to_python('192.168.004.001'), '192.168.004.001')
+        
+    def test_validate_bad_input(self):
+        field = IPAddressField('device')
+        
+        # Not long enough
+        with self.assertRaises(FieldValidationException) as context:
+            field.to_python('192.')
+            
+        # Too long
+        with self.assertRaises(FieldValidationException) as context:
+            field.to_python('abc')
+            
+        # Non-hex characters
+        with self.assertRaises(FieldValidationException) as context:
+            field.to_python('10-0.0.1')
+    
         
 class SendInsteonCommandAlertTest(unittest.TestCase):
     """
@@ -300,5 +325,6 @@ if __name__ == "__main__":
     suites.append(loader.loadTestsFromTestCase(InsteonCommandFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonDeviceFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonMultipleDeviceFieldTest))
+    suites.append(loader.loadTestsFromTestCase(IPAddressFieldTest))
     
     unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(suites))
