@@ -367,7 +367,8 @@ class ModularAlert():
         self.log_to_file = log_to_file
         self._logger = None
     
-    def escape_spaces(self, s, encapsulate_in_double_quotes=False):
+    @classmethod
+    def escape_spaces(cls, s, encapsulate_in_double_quotes=False):
         """
         If the string contains spaces, then add double quotes around the string. This is useful when outputting fields and values to Splunk since a space will cause Splunk to not recognize the entire value.
         
@@ -391,7 +392,8 @@ class ModularAlert():
         else:
             return s
     
-    def create_event_string(self, data_dict, encapsulate_value_in_double_quotes=False):
+    @classmethod
+    def create_event_string(cls, data_dict, encapsulate_value_in_double_quotes=False):
         """
         Create a string representing the event.
         
@@ -411,11 +413,11 @@ class ModularAlert():
             else:
                 values = [v]
             
-            k_escaped = self.escape_spaces(k)
+            k_escaped = cls.escape_spaces(k)
             
             # Write out each value
             for v in values:
-                v_escaped = self.escape_spaces(v, encapsulate_in_double_quotes=encapsulate_value_in_double_quotes)
+                v_escaped = cls.escape_spaces(v, encapsulate_in_double_quotes=encapsulate_value_in_double_quotes)
                 
                 
                 if len(data_str) > 0:

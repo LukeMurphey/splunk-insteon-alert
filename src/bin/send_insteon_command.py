@@ -45,25 +45,31 @@ class InsteonCommandField(Field):
                 'ping' :                  ('0F', '00', True , 1),
                 }
     
-    def to_python(self, value):
+    @classmethod
+    def get_detailed_info_from_command(cls, command_value, return_as_dict=False):
         
-        v = Field.to_python(self, value)
-        
-        command_data = InsteonCommandField.COMMANDS.get(v.lower().strip())
+        command_data = InsteonCommandField.COMMANDS.get(command_value.lower().strip())
         
         if command_data is None:
             raise FieldValidationException("This is not a recognized Insteon command")
         else:
             
-            return InsteonCommandField.InsteonCommandMeta(command_data[0], command_data[1], command_data[2], command_data[3])
-            """
-            return {
+            if return_as_dict:
+                return {
                     'cmd1' : command_data[0],
                     'cmd2' : command_data[1],
                     'response_expected' : command_data[2],
                     'times' : command_data[3]
                     }
-            """
+            else:
+                return InsteonCommandField.InsteonCommandMeta(command_data[0], command_data[1], command_data[2], command_data[3])
+            
+    
+    def to_python(self, value):
+        
+        v = Field.to_python(self, value)
+        
+        return InsteonCommandField.get_detailed_info_from_command(v)
             
 class InsteonDeviceField(Field):
     """
@@ -96,10 +102,19 @@ class InsteonMultipleDeviceField(Field):
     def to_python(self, value):
         
         v = Field.to_python(self, value)
+            
+        # Return the devices while removing duplicates
+        return InsteonMultipleDeviceField.normalize_device_ids(v)
+    
+    @staticmethod
+    def normalize_device_ids(device_list_as_str):
+        
+        if device_list_as_str is None:
+            return None
         
         devices = []
         
-        for device in v.split(","):
+        for device in device_list_as_str.split(","):
             devices.append(InsteonDeviceField.normalize_device_id(device))
             
         # Return the devices while removing duplicates
@@ -130,8 +145,9 @@ class SendInsteonCommandAlert(ModularAlert):
         ]
         
         ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.DEBUG )
-        
-    def call_insteon_web_api(self, address, port, username, password, device, cmd1, cmd2, out_stream):
+    
+    @classmethod
+    def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, logger=None):
         """
         Perform a call to the Insteon Web API.
         
@@ -143,16 +159,16 @@ class SendInsteonCommandAlert(ModularAlert):
         device -- The devices to send the command to
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
-        out_stream -- The output stream to send response messages to
+        logger -- The logger to use
         """
         
         # Build the URL to perform the action
         url = "http://%s:%s/3?0262%s0F%s%s=I=3" % (address, port, device, cmd1, cmd2)
         
-        self.logger.debug("Calling Insteon Hub API with url=%s", url)
+        if logger is not None:
+            logger.debug("Calling Insteon Hub API with url=%s", url)
         
-        # Perform the action
-        # Make the HTTP object
+        # Make the HTTP object for performing the action
         http = httplib2.Http(timeout=5, disable_ssl_certificate_validation=True)
         
         # Add in the credentials
@@ -162,14 +178,21 @@ class SendInsteonCommandAlert(ModularAlert):
         response, content = http.request(url, 'GET')
         
         if response.status == 200:
-            print >> out_stream, "Operation performed successfully, " + self.create_event_string({
-                                                                                                   'url' : url
-                                                                                                 })
-        else:
-            print >> out_stream, "Operation failed, " + self.create_event_string({
-                                                                                 'status_code' : response.status
-                                                                                 })
+            if logger is not None:
+                logger.info("Operation performed successfully, " + cls.create_event_string({
+                                                                                             'url' : url
+                                                                                            }))
             
+            return True
+        else:
+            
+            if logger is not None:
+                logger.warn("Operation failed, " + cls.create_event_string({
+                                                                             'status_code' : response.status
+                                                                            }))
+                
+            return False
+    
     def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, out_stream, times):
         """
         Perform a call to the Insteon Web API.
@@ -193,7 +216,12 @@ class SendInsteonCommandAlert(ModularAlert):
         for i in range(0, times):
             
             # Call the API
-            self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, out_stream)
+            success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, self.logger)
+            
+            if not success:
+                print >> out_stream, "Call to Insteon failed"
+            else:
+                print >> out_stream, "Call to Insteon succeeded"
             
             # If this isn't the last call, then wait a bit before calling it again
             if i < times:
@@ -213,7 +241,7 @@ class SendInsteonCommandAlert(ModularAlert):
         
         # Call the API the number of times requested
         for device in devices:
-            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times)
+            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times, self.logger)
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
         
 """
