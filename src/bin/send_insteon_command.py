@@ -9,7 +9,7 @@ import os
 
 from splunk.appserver.mrsparkle.lib.util import make_splunkhome_path
 
-from insteon_alert_app.modular_alert import ModularAlert, Field, IPAddressField, PortField, FieldValidationException
+from insteon_control_app.modular_alert import ModularAlert, Field, IPAddressField, PortField, FieldValidationException
 
 class InsteonCommandField(Field):
     """

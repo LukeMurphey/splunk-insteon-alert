@@ -1,4 +1,4 @@
-<project default="package" name="insteon_alert">
+<project default="package" name="insteon_control">
 
     <!--
     Load the properties files, local is loaded first since properties are immutable (cannot be changed

@@ -11,7 +11,7 @@ from StringIO import StringIO
 sys.path.append( os.path.join("..", "src", "bin") )
 
 from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField
-from insteon_alert_app.modular_alert import ModularAlert, Field, BooleanField, IPAddressField, FieldValidationException
+from insteon_control_app.modular_alert import ModularAlert, Field, BooleanField, IPAddressField, FieldValidationException
 
 class FakeInputStream:
     """

@@ -6,7 +6,7 @@ import json
 import splunk.rest
 from splunk import AuthenticationFailed
 
-from insteon_alert_app.search_command import SearchCommand
+from insteon_control_app.search_command import SearchCommand
 from send_insteon_command import SendInsteonCommandAlert, InsteonMultipleDeviceField, InsteonCommandField
  
 class SendInsteonCommand(SearchCommand):
@@ -35,7 +35,7 @@ class SendInsteonCommand(SearchCommand):
         hub_address = None
         hub_port = None
         
-        uri = urllib.quote('/servicesNS/nobody/insteon_alert/admin/alert_actions/send_insteon_command') + '?output_mode=json'
+        uri = urllib.quote('/servicesNS/nobody/insteon_control/admin/alert_actions/send_insteon_command') + '?output_mode=json'
         
         try:
             serverResponse, serverContent = splunk.rest.simpleRequest(uri, method='GET', sessionKey=session_key)
