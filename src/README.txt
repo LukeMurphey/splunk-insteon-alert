@@ -12,15 +12,13 @@ Configuring Splunk
 
 This app exposes a new modular alert action that can be configured in the Splunk Manager. To configure it, click "Setup Insteon Alert" in the Manager under Settings > Alert actions.
 
+Furthermore, it includes a search command for executing Insteon commands. You can run this search using " | insteoncommand".
+
 
 
 ================================================
 Getting Support
 ================================================
-
-Go to the following website if you need support:
-
-     http://answers.splunk.com/answers/app/NOT_YET_AVAILABLE
 
 You can access the source-code and get technical details about the app at:
 
