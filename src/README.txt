@@ -20,6 +20,10 @@ Furthermore, it includes a search command for executing Insteon commands. You ca
 Getting Support
 ================================================
 
+Go to the following website if you need support:
+
+     http://answers.splunk.com/answers/app/2994
+
 You can access the source-code and get technical details about the app at:
 
      https://github.com/LukeMurphey/splunk-insteon-alert
