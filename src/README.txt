@@ -40,4 +40,5 @@ Change History
 | 0.5     | Initial release                                                                                                  |
 |---------|------------------------------------------------------------------------------------------------------------------|
 | 0.6     | Fixing the license link on the setup page and updating the icons                                                 |
+|         | Logs now show up when following the link to see events from the manager                                          |
 +---------+------------------------------------------------------------------------------------------------------------------+

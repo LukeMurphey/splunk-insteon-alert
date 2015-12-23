@@ -239,7 +239,7 @@ class SendInsteonCommandAlert(ModularAlert):
                 
             return False
     
-    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, out_stream, times):
+    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times):
         """
         Perform a call to the Insteon Web API.
         
@@ -251,12 +251,14 @@ class SendInsteonCommandAlert(ModularAlert):
         device -- The device to send the command to
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
-        out_stream -- The output stream to send response messages to
         times -- How many times to call the API
         """
         
         if times < 1:
             times = 1
+        
+        # This will store the results to be outputted in the search results
+        results = []
         
         # Call the API the number of times requested
         for i in range(0, times):
@@ -264,16 +266,31 @@ class SendInsteonCommandAlert(ModularAlert):
             # Call the API
             success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, self.logger)
             
-            if not success:
-                print >> out_stream, "Call to Insteon failed"
+            if success:
+                results.append({
+                                  'message' : 'Successfully sent Insteon command to device',
+                                  'cmd1' : cmd1,
+                                  'cmd2' : cmd2,
+                                  'device' : device,
+                                  'success' : True
+                                   })
             else:
-                print >> out_stream, "Call to Insteon succeeded"
+                results.append({
+                                  'message' : 'Failed to send Insteon command to device',
+                                  'cmd1' : cmd1,
+                                  'cmd2' : cmd2,
+                                  'device' : device,
+                                  'success' : False
+                                   })
             
             # If this isn't the last call, then wait a bit before calling it again
             if i < times:
                 time.sleep(SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
+                
+        # Return the results
+        return results
     
-    def run(self, cleaned_params, payload, out_stream):
+    def run(self, cleaned_params, payload):
         
         # Get the information we need to execute the alert action
         address = cleaned_params.get('address', None)
@@ -285,10 +302,30 @@ class SendInsteonCommandAlert(ModularAlert):
         devices = cleaned_params.get('device', None)
         command = cleaned_params.get('command', None)
         
+        successes = 0
+        
         # Call the API the number of times requested
         for device in devices:
-            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times)
+            results = self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, command.times)
+            
+            # Output the results
+            for result in results:
+                
+                # Delete the message since we are going to include it directly in the message
+                message = result['message']
+                del result['message']
+                
+                # Output the message accordingly
+                if result['success']:
+                    self.logger.info(message + " " + self.create_event_string(result))
+                    successes = successes + 1
+                else:
+                    self.logger.warn(message + " " + self.create_event_string(result))
+            
+            # Sleep for a bit so that we don't overwhelm the Insteon device will requests
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
+            
+        return successes
         
 """
 If the script is being called directly from the command-line, then this is likely being executed by Splunk.

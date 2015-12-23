@@ -340,7 +340,7 @@ class IPAddressField(Field):
 
 class ModularAlert():
     
-    def __init__(self, parameters=None, logger_name='python_modular_alert', log_level=logging.INFO, log_to_file=True):
+    def __init__(self, parameters=None, logger_name='python_modular_alert', log_level=logging.INFO, log_to_file=False):
         """
         Set up the modular alert.
             
@@ -348,7 +348,7 @@ class ModularAlert():
         parameters -- A list of Field instances for validating the arguments
         logger_name -- The logger name to append to the logger
         log_level -- The log level of the logger
-        log_to_file -- Indicates whether the log messages should be sent to a log file or just outputted to Splunk via standard error
+        log_to_file -- Indicates whether the log messages should be sent to a log file or just outputted to Splunk via standard output
         """
          
         if parameters is None:
@@ -361,7 +361,7 @@ class ModularAlert():
         
         if logger_name is None or len(logger_name) == 0:
             raise Exception("Logger name cannot be empty")
-        
+        print "Logging test"
         self.logger_name = logger_name
         self.log_level = log_level
         self.log_to_file = log_to_file
@@ -501,7 +501,7 @@ class ModularAlert():
         
         return ModularInputConfig.get_config_from_xml(config_str_xml)
     
-    def run(self, cleaned_params, payload, out_stream=sys.stderr):
+    def run(self, cleaned_params, payload):
         """
         Run the input using the arguments provided.
         
@@ -520,13 +520,12 @@ class ModularAlert():
         
         pass
       
-    def execute(self, in_stream=sys.stdin, out_stream=sys.stderr):
+    def execute(self, in_stream=sys.stdin):
         """
         Get the arguments that were provided from the command-line and execute the script.
         
         Arguments:
         in_stream -- The stream to get the input from (defaults to standard input)
-        out_stream -- The stream to write the output to (defaults to standard output)
         """
         
         try:
@@ -537,16 +536,15 @@ class ModularAlert():
             
             # Validate arguments
             cleaned_params = self.validate(payload['configuration'])
-        
+            
             # Run the alert
-            self.run(cleaned_params, payload, out_stream)
+            return self.run(cleaned_params, payload)
             
         except Exception as e:
             
             self.logger.error("Execution failed: %s", ( traceback.format_exc() ))
             
-            # Make sure to grab any exceptions so that we can print a valid error message
-            print >> out_stream, "ERROR Unexpected error: %s" % (str(e))
+            return False
             
     @property
     def logger(self):

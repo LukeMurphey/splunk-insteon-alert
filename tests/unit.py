@@ -7,7 +7,6 @@ import re
 import time
 from StringIO import StringIO
 
-
 sys.path.append( os.path.join("..", "src", "bin") )
 
 from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField
@@ -58,9 +57,10 @@ class ModularAlertTest(unittest.TestCase):
                 
                 ModularAlert.__init__( self, params, "test_modular_alert" )
                 
-            def run(self, cleaned_params, payload, out_stream):
                 
-                print >> out_stream, "Alert ran successfully " + self.create_event_string(cleaned_params)
+            def run(self, cleaned_params, payload):
+                
+                return "Alert ran successfully " + self.create_event_string(cleaned_params)
                 
                 
         return TestModularAlert()
@@ -78,10 +78,9 @@ class ModularAlertTest(unittest.TestCase):
             
     def test_modular_alert_run(self):
         
-        test_instance = self.get_modular_alert_instance()
-        
-        out_stream = StringIO()
         in_stream = FakeInputStream()
+          
+        test_instance = self.get_modular_alert_instance()
         
         input = {
                  "result": {
@@ -96,9 +95,10 @@ class ModularAlertTest(unittest.TestCase):
         
         in_stream.setValue(json.dumps(input))
         
-        test_instance.execute(in_stream, out_stream)
+        result = test_instance.execute(in_stream)
         
-        self.assertEquals( len(re.findall("Alert ran successfully", out_stream.getvalue())), 1)
+        self.assertEquals( len(re.findall("Alert ran successfully", result)), 1)
+        
         
 class IPAddressFieldTest(unittest.TestCase):
     
@@ -177,11 +177,9 @@ class SendInsteonCommandAlertTest(unittest.TestCase):
             time.sleep(2)
             insteon_alert = SendInsteonCommandAlert()
             
-            out_stream = StringIO()
+            results = insteon_alert.call_insteon_web_api_repeatedly(self.address, self.port, self.username, self.password, self.device, "30", "01", 3)
             
-            insteon_alert.call_insteon_web_api_repeatedly(self.address, self.port, self.username, self.password, self.device, "30", "01", out_stream, 3)
-            
-            self.assertEquals( len(re.findall("Operation performed successfully", out_stream.getvalue())), 3)
+            self.assertEquals( results[0]['success'], True)
             
     def test_execute(self):
 
@@ -192,7 +190,6 @@ class SendInsteonCommandAlertTest(unittest.TestCase):
 
             insteon_alert = SendInsteonCommandAlert()
             
-            out_stream = StringIO()
             in_stream = FakeInputStream()
             
             input = {
@@ -214,9 +211,7 @@ class SendInsteonCommandAlertTest(unittest.TestCase):
             
             in_stream.setValue(json.dumps(input))
             
-            insteon_alert.execute(in_stream, out_stream)
-            
-            self.assertEquals( len(re.findall("Operation performed successfully", out_stream.getvalue())), 1)
+            self.assertEquals(insteon_alert.execute(in_stream), 1)
         
         
 class InsteonCommandFieldTest(unittest.TestCase):
