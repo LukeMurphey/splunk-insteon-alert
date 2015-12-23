@@ -4,6 +4,10 @@ import logging
 import httplib2
 import time
 import re
+import csv
+import os
+
+from splunk.appserver.mrsparkle.lib.util import make_splunkhome_path
 
 from insteon_alert_app.modular_alert import ModularAlert, Field, IPAddressField, PortField, FieldValidationException
 
@@ -83,16 +87,58 @@ class InsteonDeviceField(Field):
         return InsteonDeviceField.normalize_device_id(v)
         
     @staticmethod
-    def normalize_device_id(device):
+    def normalize_device_id(device, try_to_load_from_lookup=True):
         
+        # Try to load the device ID from the lookup
+        if try_to_load_from_lookup:
+            device_from_lookup = InsteonDeviceField.get_insteon_device_from_lookups(device)
+        else:
+            device_from_lookup = None
+        
+        # See if the provided device matches
         match = re.match("^([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})[-:.]?([a-fA-F0-9]{2,2})$", device.strip())
         
-        if match is None:
+        # The provided match is a not an ID then it is likely a name
+        if match is None and device_from_lookup is not None:
+            return InsteonDeviceField.normalize_device_id(device_from_lookup, False)
+        elif match is None:
             raise FieldValidationException(str(device) + " is not a recognized Insteon device (should be in the format \"56:78:9A\")")
         else:
             return (match.group(1) + match.group(2) + match.group(3)).upper()
+    
+    @staticmethod
+    def get_insteon_device_from_lookups(device_name):
         
+        # By default, we will try the lookup in this app
+        device = InsteonDeviceField.get_insteon_device_from_lookup(device_name, make_splunkhome_path(["etc", "apps", "insteon_alert", "lookups", "insteon_devices.csv"]))
         
+        # Otherwise, try this app
+        if device is None: 
+            device = InsteonDeviceField.get_insteon_device_from_lookup(device_name, make_splunkhome_path(["etc", "apps", "insteon", "lookups", "insteon_devices.csv"]))
+            
+        return device
+    
+    @staticmethod
+    def get_insteon_device_from_lookup(device_name, devices_lookup_file):
+        
+        try:
+                 
+            # See if we have a local lookup file, if we do, use that one
+            if not os.path.isfile(devices_lookup_file):
+                return None
+            
+            # Open the file and try to find the entry
+            with open(devices_lookup_file, 'rb') as csvfile:
+                insteon_devices = csv.DictReader(csvfile)
+                
+                # Try to find the device
+                for insteon_device in insteon_devices:
+                    if insteon_device.get('name', None) == device_name:
+                        return insteon_device.get('address', None)
+                    
+        except Exception as e:
+            # Device not found
+            return None
             
 class InsteonMultipleDeviceField(Field):
     """

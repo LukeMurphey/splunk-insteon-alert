@@ -55,7 +55,6 @@ class SendInsteonCommand(SearchCommand):
         
         return hub_address, hub_port, username, password
         
-    
     def handle_results(self, results, session_key, in_preview):
         
         # Obtain the authentication information
@@ -119,10 +118,16 @@ class SendInsteonCommand(SearchCommand):
                                   }])
             return False
         
+        # This will store the results that we will output at the end
+        results = []
+        
         # Execute the command for each device
         for device in devices:
-            self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times )
+            results.extend(self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times ))
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
+    
+        # Output the results so that users know if the commands succeeded
+        self.output_results(results)
     
     def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times):
         """
@@ -141,6 +146,9 @@ class SendInsteonCommand(SearchCommand):
         
         if times < 1:
             times = 1
+            
+        # This will store the results to be outputted in the search results
+        results = []
         
         # Call the API the number of times requested
         for i in range(0, times):
@@ -149,23 +157,26 @@ class SendInsteonCommand(SearchCommand):
             result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, self.logger)
             
             if result:
-                self.output_results([{
+                results.append({
                                   'message' : 'Successfully sent Insteon command to hub',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device
-                                   }])
+                                   })
             else:
-                self.output_results([{
+                results.append({
                                   'message' : 'Failed to send Insteon command to hub',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device
-                                   }])
+                                   })
             
             # If this isn't the last call, then wait a bit before calling it again
             if i < times:
                 time.sleep(SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
+                
+            # Return the results
+            return results
         
 if __name__ == '__main__':
     try:
