@@ -287,7 +287,7 @@ class SendInsteonCommandAlert(ModularAlert):
         
         # Call the API the number of times requested
         for device in devices:
-            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times, self.logger)
+            self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, out_stream, command.times)
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
         
 """
