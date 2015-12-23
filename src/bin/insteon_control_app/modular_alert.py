@@ -565,7 +565,7 @@ class ModularAlert():
             logger.addHandler(file_handler)
         else:
             stderr_handler = logging.StreamHandler(sys.stderr)
-            formatter = logging.Formatter('%(levelname)s %(message)s')
+            formatter = logging.Formatter(' %(levelname)s %(message)s')
             stderr_handler.setFormatter(formatter)
             logger.addHandler(stderr_handler)
         

@@ -190,7 +190,7 @@ class SendInsteonCommandAlert(ModularAlert):
                     InsteonMultipleDeviceField("device", empty_allowed=False, none_allowed=False)
         ]
         
-        ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.DEBUG )
+        ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.INFO )
     
     @classmethod
     def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, logger=None):
