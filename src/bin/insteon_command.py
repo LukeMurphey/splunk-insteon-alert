@@ -158,14 +158,14 @@ class SendInsteonCommand(SearchCommand):
             
             if result:
                 results.append({
-                                  'message' : 'Successfully sent Insteon command to hub',
+                                  'message' : 'Successfully sent Insteon command to device',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device
                                    })
             else:
                 results.append({
-                                  'message' : 'Failed to send Insteon command to hub',
+                                  'message' : 'Failed to send Insteon command to device',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device
