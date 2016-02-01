@@ -5,19 +5,21 @@ import json
 
 import splunk.rest
 from splunk import AuthenticationFailed
+from splunk.util import normalizeBoolean
 
 from insteon_control_app.search_command import SearchCommand
 from send_insteon_command import SendInsteonCommandAlert, InsteonMultipleDeviceField, InsteonCommandField
  
 class SendInsteonCommand(SearchCommand):
     
-    def __init__(self, device=None, command=None, cmd1=None, cmd2=None):
+    def __init__(self, device=None, command=None, cmd1=None, cmd2=None, return_response=None):
         
         # Save the parameters
         self.device = device
         self.command = command
         self.cmd1 = cmd1
         self.cmd2 = cmd2
+        self.return_response = return_response
         
          # Initialize the class
         SearchCommand.__init__( self, run_in_preview=False, logger_name='insteon_search_command')
@@ -89,6 +91,7 @@ class SendInsteonCommand(SearchCommand):
         cmd1 = self.cmd1
         cmd2 = self.cmd2
         times = 1
+        response_expected = normalizeBoolean(self.return_response)
         
         command_info = None
         
@@ -105,6 +108,9 @@ class SendInsteonCommand(SearchCommand):
                     cmd2 = command_info.cmd2
                     
                 times = command_info.times
+                
+                if response_expected is None:
+                    response_expected = command_info.response_expected
                 
         # Stop if we didn't get the proper command information
         if cmd1 is None:
@@ -123,13 +129,13 @@ class SendInsteonCommand(SearchCommand):
         
         # Execute the command for each device
         for device in devices:
-            results.extend(self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times ))
+            results.extend(self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times, response_expected ))
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
     
         # Output the results so that users know if the commands succeeded
         self.output_results(results)
     
-    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times):
+    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False):
         """
         Perform a call to the Insteon Web API.
         
@@ -142,6 +148,7 @@ class SendInsteonCommand(SearchCommand):
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
         times -- How many times to call the API
+        response_expected -- If the command should expect a response
         """
         
         if times < 1:
@@ -154,14 +161,27 @@ class SendInsteonCommand(SearchCommand):
         for i in range(0, times):
             
             # Call the API
-            result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, self.logger)
+            result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, self.logger)
             
-            if result:
+            if result is True:
                 results.append({
                                   'message' : 'Successfully sent Insteon command to device',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device
+                                   })
+            elif result is not None and result != False:
+                results.append({
+                                  'message' : 'Successfully sent Insteon command to device',
+                                  'cmd1' : cmd1,
+                                  'cmd2' : cmd2,
+                                  'device' : device,
+                                  'responder_device' : result['source_device'],
+                                  'ack' : result['ack'],
+                                  'hops' : result['hops'],
+                                  'response_cmd1' : result['cmd1'],
+                                  'response_cmd2' : result['cmd2'],
+                                  'response_complete' : result['full_response']
                                    })
             else:
                 results.append({
@@ -183,4 +203,5 @@ if __name__ == '__main__':
         SendInsteonCommand.execute()
         sys.exit(0)
     except Exception as e:
+        sys.exit(10)
         print e

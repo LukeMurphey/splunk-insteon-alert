@@ -6,6 +6,7 @@ import time
 import re
 import csv
 import os
+from xml.etree import ElementTree
 
 from splunk.appserver.mrsparkle.lib.util import make_splunkhome_path
 
@@ -38,6 +39,7 @@ class InsteonCommandField(Field):
                 'off' :                   ('13', 'FF', False, 1),
                 'fast_off' :              ('14', 'FF', False, 1),
                 'status' :                ('15', 'FF', True , 1),
+                'light_status' :          ('19', '02', True , 1),
                 'beep' :                  ('30', '01', False, 1),
                 'beep_two_times' :        ('30', '01', False, 2),
                 'beep_three_times' :      ('30', '01', False, 3),
@@ -165,7 +167,6 @@ class InsteonMultipleDeviceField(Field):
             
         # Return the devices while removing duplicates
         return set(devices)
-    
 
 class SendInsteonCommandAlert(ModularAlert):
     """
@@ -193,7 +194,81 @@ class SendInsteonCommandAlert(ModularAlert):
         ModularAlert.__init__( self, params, logger_name="send_insteon_command_alert", log_level=logging.INFO )
     
     @classmethod
-    def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, logger=None):
+    def get_response_if_matches(cls, address, port, username, password, device, cmd1, cmd2, logger=None):
+        
+        max_tries = 5
+        delay_between_call = 0.5
+        
+        for i in range(0, max_tries):
+            pass
+        
+        pass
+    
+    @classmethod
+    def parse_raw_response(cls, response_raw):
+        """
+        This function parse a response from an Insteon Hub. The response looks something like this:
+            
+            02622C86260F15FF  06               0250          2C8626          2CB84E     2      F           19     00
+            Last Command      Response Flag    Return Flag   Target Device   Source     Ack    Hop Count   cmd1   cmd2 (level)
+        """
+        
+        # 
+        #for 
+        
+        response = {
+         'last_command'      : response_raw[0:16],
+         'last_command_cmd1' : response_raw[12:14],
+         'last_command_cmd2' : response_raw[14:16],
+         'full_response'     : response_raw[16:40],
+        
+         'response_flag'     : response_raw[16:18],
+         'return_flag'       : response_raw[18:22],
+         'target_device'     : response_raw[22:28],
+         'source_device'     : response_raw[28:34],
+         'ack'               : response_raw[34:35],
+         'hops'              : response_raw[35:36],
+         'cmd1'              : response_raw[36:38],
+         'cmd2'              : response_raw[38:40]
+        }
+        
+        return response
+    
+    @classmethod
+    def get_response(cls, address, port, username, password, logger=None):
+        
+        time.sleep(1.0)
+        
+        # Build the URL to perform the action
+        url = "http://%s:%s/buffstatus.xml" % (address, port)
+        
+        # Make the HTTP object for performing the action
+        http = httplib2.Http(timeout=5, disable_ssl_certificate_validation=True)
+        
+        # Add in the credentials
+        http.add_credentials(username, password)
+        
+        # Perform the operation
+        response, content = http.request(url, 'GET')
+        
+        if response.status == 200:
+            
+            if logger is not None:
+                logger.debug("Obtained response successfully, " + cls.create_event_string({
+                                                                                            'url' : url
+                                                                                           }))
+            
+            response_xml = ElementTree.fromstring(content)
+            
+            for data in response_xml.iter('BS'):
+                return data.text
+            
+        else:
+            return None
+        
+    
+    @classmethod
+    def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, response_expected, logger=None):
         """
         Perform a call to the Insteon Web API.
         
@@ -205,6 +280,7 @@ class SendInsteonCommandAlert(ModularAlert):
         device -- The devices to send the command to
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
+        response_expected -- Get the response from the command
         logger -- The logger to use
         """
         
@@ -228,6 +304,13 @@ class SendInsteonCommandAlert(ModularAlert):
                 logger.info("Operation performed successfully, " + cls.create_event_string({
                                                                                              'url' : url
                                                                                             }))
+                       
+            # Get the response
+            if response_expected:
+                raw_response = cls.get_response(address, port, username, password, logger)
+                
+                parsed_response = cls.parse_raw_response(raw_response)
+                return parsed_response
             
             return True
         else:
@@ -236,10 +319,10 @@ class SendInsteonCommandAlert(ModularAlert):
                 logger.warn("Operation failed, " + cls.create_event_string({
                                                                              'status_code' : response.status
                                                                             }))
-                
+            
             return False
     
-    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times):
+    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False):
         """
         Perform a call to the Insteon Web API.
         
@@ -252,6 +335,7 @@ class SendInsteonCommandAlert(ModularAlert):
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
         times -- How many times to call the API
+        response_expected -- Get the response from the command
         """
         
         if times < 1:
@@ -264,15 +348,17 @@ class SendInsteonCommandAlert(ModularAlert):
         for i in range(0, times):
             
             # Call the API
-            success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, self.logger)
+            success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, self.logger)
             
             if success:
+                
                 results.append({
                                   'message' : 'Successfully sent Insteon command to device',
                                   'cmd1' : cmd1,
                                   'cmd2' : cmd2,
                                   'device' : device,
-                                  'success' : True
+                                  'success' : True,
+                                  'response' : success
                                    })
             else:
                 results.append({
@@ -306,7 +392,7 @@ class SendInsteonCommandAlert(ModularAlert):
         
         # Call the API the number of times requested
         for device in devices:
-            results = self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, command.times)
+            results = self.call_insteon_web_api_repeatedly(address, port, username, password, device, command.cmd1, command.cmd2, command.times, command.response_expected)
             
             # Output the results
             for result in results:

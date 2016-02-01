@@ -361,7 +361,7 @@ class ModularAlert():
         
         if logger_name is None or len(logger_name) == 0:
             raise Exception("Logger name cannot be empty")
-        print "Logging test"
+        
         self.logger_name = logger_name
         self.log_level = log_level
         self.log_to_file = log_to_file

@@ -168,7 +168,7 @@ class SendInsteonCommandAlertTest(unittest.TestCase):
             return True
         else:
             return False
-        
+    """
     def test_send_command(self):
         
         # Only perform this test if requested
@@ -212,6 +212,29 @@ class SendInsteonCommandAlertTest(unittest.TestCase):
             in_stream.setValue(json.dumps(input))
             
             self.assertEquals(insteon_alert.execute(in_stream), 1)
+    
+    
+    def test_parse_raw_response_sd_command(self):
+        
+        response = SendInsteonCommandAlert.parse_raw_response("02622C86260F15FF0602502C86262CB84E2F1900")
+        
+        self.assertEqual(response['last_command'], "02622C86260F15FF")
+        self.assertEqual(response['last_command_cmd1'], "15")
+        self.assertEqual(response['last_command_cmd2'], "FF")
+        
+        self.assertEqual(response['full_response'], "0602502C86262CB84E2F1900")
+        self.assertEqual(response['target_device'], "2C8626")
+        self.assertEqual(response['source_device'], "2CB84E")
+        self.assertEqual(response['cmd1'], "19")
+        self.assertEqual(response['cmd2'], "00")
+    
+    """
+    
+    def test_get_response(self):
+        
+        response = SendInsteonCommandAlert.call_insteon_web_api(self.address, self.port, self.username, self.password, self.device, '19', '02', True)
+        print response
+        self.assertEquals(response['full_response'][6:12], InsteonDeviceField.normalize_device_id(self.device, False))  
         
         
 class InsteonCommandFieldTest(unittest.TestCase):
@@ -248,6 +271,10 @@ class InsteonCommandFieldTest(unittest.TestCase):
         # Bad input
         with self.assertRaises(FieldValidationException) as context:
             ic_field.to_python('self_destruct')
+            
+    def test_parse_response(self):
+        # TODO
+        "026227E2E70F15FF06025027E2E72CB84E2F15FF000000000000000000000000000000000000000000000000000000000000"
         
         
 class InsteonDeviceFieldTest(unittest.TestCase):
@@ -315,7 +342,7 @@ class InsteonMultipleDeviceFieldTest(unittest.TestCase):
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suites = []
-    suites.append(loader.loadTestsFromTestCase(ModularAlertTest))
+    #suites.append(loader.loadTestsFromTestCase(ModularAlertTest))
     suites.append(loader.loadTestsFromTestCase(SendInsteonCommandAlertTest))
     suites.append(loader.loadTestsFromTestCase(InsteonCommandFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonDeviceFieldTest))
