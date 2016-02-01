@@ -44,4 +44,5 @@ Change History
 |---------|------------------------------------------------------------------------------------------------------------------|
 | 0.7     | Set the source-typing of internal search command logs                                                            |
 |         | Added the ability to send extended-direct commands                                                               |
+|         | Fixed issue where the commands with a single digit did not have leading zeroes added properly                    |
 +---------+------------------------------------------------------------------------------------------------------------------+

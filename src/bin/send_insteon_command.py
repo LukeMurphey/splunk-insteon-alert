@@ -318,6 +318,10 @@ class SendInsteonCommandAlert(ModularAlert):
         logger -- The logger to use
         """
         
+        # Fill in zeroes before the cmd fields and convert them to upper case
+        cmd1 = cmd1.zfill(2).upper()
+        cmd2 = cmd2.zfill(2).upper()
+        
         # Build the URL to perform the action
         if extended:
             url = "http://%s:%s/3?0262%s1F%s%s%s=I=3" % (address, port, device, cmd1, cmd2, data)

@@ -124,7 +124,6 @@ class SendInsteonCommand(SearchCommand):
                                   'message' : 'Insufficient information provided: missing cmd2'
                                   }])
             return False
-        
                 
         # Determine if we are doing an extended direct command and validate the data
         if self.extended_data is not None:
