@@ -41,4 +41,7 @@ Change History
 |---------|------------------------------------------------------------------------------------------------------------------|
 | 0.6     | Fixing the license link on the setup page and updating the icons                                                 |
 |         | Logs now show up when following the link to see events from the manager                                          |
+|---------|------------------------------------------------------------------------------------------------------------------|
+| 0.7     | Set the source-typing of internal search command logs                                                            |
+|         | Added the ability to send extended-direct commands                                                               |
 +---------+------------------------------------------------------------------------------------------------------------------+
