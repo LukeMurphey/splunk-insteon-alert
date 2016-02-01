@@ -9,7 +9,7 @@ from StringIO import StringIO
 
 sys.path.append( os.path.join("..", "src", "bin") )
 
-from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField
+from send_insteon_command import InsteonCommandField,  SendInsteonCommandAlert, InsteonDeviceField, InsteonMultipleDeviceField, InsteonExtendedDataField
 from insteon_control_app.modular_alert import ModularAlert, Field, BooleanField, IPAddressField, FieldValidationException
 
 class FakeInputStream:
@@ -124,6 +124,26 @@ class IPAddressFieldTest(unittest.TestCase):
         with self.assertRaises(FieldValidationException) as context:
             field.to_python('10-0.0.1')
     
+class InsteonExtendedDataFieldTest(unittest.TestCase):
+    
+    def test_validate_good_input(self):
+        field = InsteonExtendedDataField('device')
+        
+        # Good input
+        self.assertEqual(field.to_python('9296'), '0000000000000000000000009296')
+        self.assertEqual(field.to_python('0000000000000000000000009296'), '0000000000000000000000009296')
+        self.assertEqual(field.to_python('af'), '00000000000000000000000000AF')
+        
+    def test_validate_bad_input(self):
+        field = InsteonExtendedDataField('device')
+        
+        # Too long
+        with self.assertRaises(FieldValidationException) as context:
+            field.to_python('00000000000000000000000092961')
+            
+        # Non-hex characters
+        with self.assertRaises(FieldValidationException) as context:
+            field.to_python('0g')
         
 class SendInsteonCommandAlertTest(unittest.TestCase):
     """
@@ -342,11 +362,12 @@ class InsteonMultipleDeviceFieldTest(unittest.TestCase):
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suites = []
-    #suites.append(loader.loadTestsFromTestCase(ModularAlertTest))
+    suites.append(loader.loadTestsFromTestCase(ModularAlertTest))
     suites.append(loader.loadTestsFromTestCase(SendInsteonCommandAlertTest))
     suites.append(loader.loadTestsFromTestCase(InsteonCommandFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonDeviceFieldTest))
     suites.append(loader.loadTestsFromTestCase(InsteonMultipleDeviceFieldTest))
     suites.append(loader.loadTestsFromTestCase(IPAddressFieldTest))
+    suites.append(loader.loadTestsFromTestCase(InsteonExtendedDataFieldTest))
     
     unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(suites))
