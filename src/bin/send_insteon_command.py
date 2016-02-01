@@ -168,6 +168,38 @@ class InsteonMultipleDeviceField(Field):
         # Return the devices while removing duplicates
         return set(devices)
 
+class InsteonExtendedDataField(Field):
+    """
+    Represents an extended data field.
+    """
+    
+    @staticmethod
+    def normalize_extended_data(data):
+        
+        if data is None:
+            data = ""
+            
+        data = data.strip()
+        
+        # Make sure the field is not too long
+        if len(data) > 28:
+            raise FieldValidationException("Data section is too long, should not be greater then 28 characters")
+        
+        # Make sure the content is hexadecimal
+        match = re.match("^[0-9a-fA-F]*$", data)
+        
+        if match is None:
+            raise FieldValidationException("The data contains invalid characters (needs to be hexadecimal)")
+            
+        # Add the leading zeroes and convert to upper-case
+        return data.zfill(28).upper()
+    
+    def to_python(self, value):
+        
+        v = Field.to_python(self, value)
+        
+        return InsteonExtendedDataField.normalize_extended_data(v)
+
 class SendInsteonCommandAlert(ModularAlert):
     """
     This alert action supports sending commands to an Insteon Hub via its web interface.
@@ -268,7 +300,7 @@ class SendInsteonCommandAlert(ModularAlert):
         
     
     @classmethod
-    def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, response_expected, logger=None):
+    def call_insteon_web_api(cls, address, port, username, password, device, cmd1, cmd2, response_expected, extended=False, data=None, logger=None):
         """
         Perform a call to the Insteon Web API.
         
@@ -281,11 +313,16 @@ class SendInsteonCommandAlert(ModularAlert):
         cmd1 -- The hex string of the first command portion of the command
         cmd2 -- The hex string of the second command portion of the command
         response_expected -- Get the response from the command
+        extended -- Whether the command is an extended direct command
+        data -- The data to send to the server (in hexadecimal); should not exceed 28 characters (14 bytes of data in base 16)
         logger -- The logger to use
         """
         
         # Build the URL to perform the action
-        url = "http://%s:%s/3?0262%s0F%s%s=I=3" % (address, port, device, cmd1, cmd2)
+        if extended:
+            url = "http://%s:%s/3?0262%s1F%s%s%s=I=3" % (address, port, device, cmd1, cmd2, data)
+        else:
+            url = "http://%s:%s/3?0262%s0F%s%s=I=3" % (address, port, device, cmd1, cmd2)
         
         if logger is not None:
             logger.debug("Calling Insteon Hub API with url=%s", url)
@@ -322,7 +359,7 @@ class SendInsteonCommandAlert(ModularAlert):
             
             return False
     
-    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False):
+    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False, extended=False, data=None):
         """
         Perform a call to the Insteon Web API.
         
@@ -336,6 +373,8 @@ class SendInsteonCommandAlert(ModularAlert):
         cmd2 -- The hex string of the second command portion of the command
         times -- How many times to call the API
         response_expected -- Get the response from the command
+        extended -- Whether the command is an extended direct command
+        data -- The data to send to the server (in hexadecimal)
         """
         
         if times < 1:
@@ -348,7 +387,7 @@ class SendInsteonCommandAlert(ModularAlert):
         for i in range(0, times):
             
             # Call the API
-            success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, self.logger)
+            success = self.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, extended, data, self.logger)
             
             if success:
                 

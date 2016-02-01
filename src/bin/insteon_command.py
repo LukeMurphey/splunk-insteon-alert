@@ -8,11 +8,11 @@ from splunk import AuthenticationFailed
 from splunk.util import normalizeBoolean
 
 from insteon_control_app.search_command import SearchCommand
-from send_insteon_command import SendInsteonCommandAlert, InsteonMultipleDeviceField, InsteonCommandField
+from send_insteon_command import SendInsteonCommandAlert, InsteonMultipleDeviceField, InsteonCommandField, InsteonExtendedDataField, FieldValidationException
  
 class SendInsteonCommand(SearchCommand):
     
-    def __init__(self, device=None, command=None, cmd1=None, cmd2=None, return_response=None):
+    def __init__(self, device=None, command=None, cmd1=None, cmd2=None, return_response=None, data=None):
         
         # Save the parameters
         self.device = device
@@ -20,6 +20,7 @@ class SendInsteonCommand(SearchCommand):
         self.cmd1 = cmd1
         self.cmd2 = cmd2
         self.return_response = return_response
+        self.extended_data = data
         
          # Initialize the class
         SearchCommand.__init__( self, run_in_preview=False, logger_name='insteon_search_command')
@@ -124,18 +125,34 @@ class SendInsteonCommand(SearchCommand):
                                   }])
             return False
         
+                
+        # Determine if we are doing an extended direct command and validate the data
+        if self.extended_data is not None:
+            extended = True
+            
+            try:
+                data = InsteonExtendedDataField.normalize_extended_data(self.extended_data)
+            except FieldValidationException as e:
+                self.output_results([{
+                                      'message' : 'The data field is invalid: ' + str(e)
+                                      }])
+            
+        else:
+            extended = False
+            data = None
+        
         # This will store the results that we will output at the end
         results = []
         
         # Execute the command for each device
         for device in devices:
-            results.extend(self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times, response_expected ))
+            results.extend(self.call_insteon_web_api_repeatedly( hub_address, hub_port, username, password, device, cmd1, cmd2, times, response_expected, extended, data ))
             time.sleep(2*SendInsteonCommandAlert.SLEEP_BETWEEN_CALL_DURATION)
     
         # Output the results so that users know if the commands succeeded
         self.output_results(results)
     
-    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False):
+    def call_insteon_web_api_repeatedly(self, address, port, username, password, device, cmd1, cmd2, times, response_expected=False, extended=False, data=None):
         """
         Perform a call to the Insteon Web API.
         
@@ -149,6 +166,8 @@ class SendInsteonCommand(SearchCommand):
         cmd2 -- The hex string of the second command portion of the command
         times -- How many times to call the API
         response_expected -- If the command should expect a response
+        extended -- Whether the command is an extended direct command
+        data -- The data to send to the server (in hexadecimal)
         """
         
         if times < 1:
@@ -161,7 +180,7 @@ class SendInsteonCommand(SearchCommand):
         for i in range(0, times):
             
             # Call the API
-            result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, self.logger)
+            result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, extended, data, self.logger)
             
             if result is True:
                 results.append({
