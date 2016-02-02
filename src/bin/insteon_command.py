@@ -93,7 +93,7 @@ class SendInsteonCommand(SearchCommand):
         cmd2 = self.cmd2
         times = 1
         response_expected = normalizeBoolean(self.return_response)
-        
+        extended_data = self.extended_data
         command_info = None
         
         if self.command is not None:
@@ -113,6 +113,9 @@ class SendInsteonCommand(SearchCommand):
                 if response_expected is None:
                     response_expected = command_info.response_expected
                 
+                if extended_data is None:
+                    extended_data = command_info.data
+                
         # Stop if we didn't get the proper command information
         if cmd1 is None:
             self.output_results([{
@@ -126,11 +129,11 @@ class SendInsteonCommand(SearchCommand):
             return False
                 
         # Determine if we are doing an extended direct command and validate the data
-        if self.extended_data is not None:
+        if extended_data is not None:
             extended = True
             
             try:
-                data = InsteonExtendedDataField.normalize_extended_data(self.extended_data)
+                data = InsteonExtendedDataField.normalize_extended_data(extended_data)
             except FieldValidationException as e:
                 self.output_results([{
                                       'message' : 'The data field is invalid: ' + str(e)
@@ -181,33 +184,28 @@ class SendInsteonCommand(SearchCommand):
             # Call the API
             result = SendInsteonCommandAlert.call_insteon_web_api(address, port, username, password, device, cmd1, cmd2, response_expected, extended, data, self.logger)
             
+            # Make the result message with the correct message
             if result is True:
-                results.append({
-                                  'message' : 'Successfully sent Insteon command to device',
-                                  'cmd1' : cmd1,
-                                  'cmd2' : cmd2,
-                                  'device' : device
-                                   })
-            elif result is not None and result != False:
-                results.append({
-                                  'message' : 'Successfully sent Insteon command to device',
-                                  'cmd1' : cmd1,
-                                  'cmd2' : cmd2,
-                                  'device' : device,
-                                  'responder_device' : result['source_device'],
-                                  'ack' : result['ack'],
-                                  'hops' : result['hops'],
-                                  'response_cmd1' : result['cmd1'],
-                                  'response_cmd2' : result['cmd2'],
-                                  'response_complete' : result['full_response']
-                                   })
+                result_message = {
+                                      'message' : 'Successfully sent Insteon command to device'
+                                }
             else:
-                results.append({
-                                  'message' : 'Failed to send Insteon command to device',
-                                  'cmd1' : cmd1,
-                                  'cmd2' : cmd2,
-                                  'device' : device
-                                   })
+                result_message = {
+                                  'message' : 'Failed to send Insteon command to device'
+                                   }
+
+            # Add in the basic command fields
+            result_message['cmd1'] = cmd1
+            result_message['cmd2'] = cmd2
+            result_message['device'] = device
+            
+            # Add in the extended command information
+            if extended:
+                result_message['extended'] = 'true'
+                result_message['data'] = data
+
+            # Append the result            
+            results.append(result_message)
             
             # If this isn't the last call, then wait a bit before calling it again
             if i < times:

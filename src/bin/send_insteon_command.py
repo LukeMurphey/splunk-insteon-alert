@@ -21,11 +21,13 @@ class InsteonCommandField(Field):
     
     class InsteonCommandMeta:
         
-        def __init__(self, cmd1, cmd2, response_expected=False, times=1):
+        def __init__(self, cmd1, cmd2, response_expected=False, times=1, extended=False, data=None):
             self.cmd1 = cmd1
             self.cmd2 = cmd2
             self.response_expected = response_expected
             self.times = times
+            self.extended = extended
+            self.data = data
     
     # These commands are a list of the shortcuts
     # The tuple consists of:
@@ -34,21 +36,40 @@ class InsteonCommandField(Field):
     #    3) should the command be polled for a response
     #    4) how many times the command should be called
     COMMANDS = {
-                'on' :                    ('11', 'FF', False, 1),
-                'fast_on' :               ('12', 'FF', False, 1),
-                'off' :                   ('13', 'FF', False, 1),
-                'fast_off' :              ('14', 'FF', False, 1),
-                'status' :                ('15', 'FF', True , 1),
-                'light_status' :          ('19', '02', True , 1),
-                'beep' :                  ('30', '01', False, 1),
-                'beep_two_times' :        ('30', '01', False, 2),
-                'beep_three_times' :      ('30', '01', False, 3),
-                'beep_four_times' :       ('30', '01', False, 4),
-                'beep_five_times' :       ('30', '01', False, 5),
-                'beep_ten_times' :        ('30', '01', False, 10),
-                'imeter_status' :         ('82', '00', True , 1),
-                'imeter_reset' :          ('80', '00', False, 1),
-                'ping' :                  ('0F', '00', True , 1),
+                'on' :                           ('11', 'FF', False, 1),
+                'fast_on' :                      ('12', 'FF', False, 1),
+                'off' :                          ('13', 'FF', False, 1),
+                'fast_off' :                     ('14', 'FF', False, 1),
+                'status' :                       ('15', 'FF', True , 1),
+                'light_status' :                 ('19', '02', True , 1),
+                'ping' :                         ('0F', '00', True , 1),
+                
+                # Beeps:
+                'beep' :                         ('30', '01', False, 1),
+                'beep_two_times' :               ('30', '01', False, 2),
+                'beep_three_times' :             ('30', '01', False, 3),
+                'beep_four_times' :              ('30', '01', False, 4),
+                'beep_five_times' :              ('30', '01', False, 5),
+                'beep_ten_times' :               ('30', '01', False, 10),
+                
+                # iMeter
+                'imeter_status' :                ('82', '00', True , 1),
+                'imeter_reset' :                 ('80', '00', False, 1),
+                
+                # Thermostat info
+                'thermostat_info' :              ('2E', '02', False, 1, '9296'),
+                'thermostat_temp' :              ('6A', '00', False, 1),
+                'thermostat_humidity' :          ('6A', '20', False, 1),
+                'thermostat_setpoint' :          ('6A', '60', False, 1, '9296'),
+                
+                # Thermostat control
+                'thermostat_mode_heat' :         ('6B', '04', False, 1),
+                'thermostat_mode_cool' :         ('6B', '05', False, 1),
+                'thermostat_mode_manual_auto' :  ('6B', '06', False, 1),
+                'thermostat_fan_on' :            ('6B', '07', False, 1),
+                'thermostat_fan_auto' :          ('6B', '08', False, 1),
+                'thermostat_all_off' :           ('6B', '09', False, 1),
+                'thermostat_mode_auto' :         ('6B', '0A', False, 1)
                 }
     
     @classmethod
@@ -60,15 +81,24 @@ class InsteonCommandField(Field):
             raise FieldValidationException("This is not a recognized Insteon command")
         else:
             
+            extended = False
+            data = None
+            
+            if len(command_data) >= 5:
+                extended = True
+                data = command_data[4].zfill(28)
+            
             if return_as_dict:
                 return {
                     'cmd1' : command_data[0],
                     'cmd2' : command_data[1],
                     'response_expected' : command_data[2],
-                    'times' : command_data[3]
+                    'times' : command_data[3],
+                    'extended' : extended,
+                    'data' : data
                     }
             else:
-                return InsteonCommandField.InsteonCommandMeta(command_data[0], command_data[1], command_data[2], command_data[3])
+                return InsteonCommandField.InsteonCommandMeta(command_data[0], command_data[1], command_data[2], command_data[3], extended, data)
             
     
     def to_python(self, value):

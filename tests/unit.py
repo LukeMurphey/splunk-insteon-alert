@@ -292,9 +292,20 @@ class InsteonCommandFieldTest(unittest.TestCase):
         with self.assertRaises(FieldValidationException) as context:
             ic_field.to_python('self_destruct')
             
-    def test_parse_response(self):
-        # TODO
-        "026227E2E70F15FF06025027E2E72CB84E2F15FF000000000000000000000000000000000000000000000000000000000000"
+    def test_extended_commands(self):
+        ic_field = InsteonCommandField('command')
+        
+        # For a command with an extended data section
+        self.assertEqual(ic_field.to_python('thermostat_info').cmd1, '2E')
+        self.assertEqual(ic_field.to_python('thermostat_info').cmd2, '02')
+        self.assertEqual(ic_field.to_python('thermostat_info').extended, True)
+        self.assertEqual(ic_field.to_python('thermostat_info').data, '0000000000000000000000009296')
+        
+        # For a command without an extended data section
+        self.assertEqual(ic_field.to_python('ping').cmd1, '0F')
+        self.assertEqual(ic_field.to_python('ping').cmd2, '00')
+        self.assertEqual(ic_field.to_python('ping').extended, False)
+        self.assertEqual(ic_field.to_python('ping').data, None)
         
         
 class InsteonDeviceFieldTest(unittest.TestCase):
