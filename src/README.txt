@@ -10,9 +10,20 @@ This app provides a mechanism for controlling Insteon devices from Splunk.
 Configuring Splunk
 ================================================
 
-This app exposes a new modular alert action that can be configured in the Splunk Manager. To configure it, click "Setup Insteon Alert" in the Manager under Settings > Alert actions.
+Install this app into Splunk by doing the following:
 
-Furthermore, it includes a search command for executing Insteon commands. You can run this search using " | insteoncommand".
+  1. Log in to Splunk Web and navigate to "Apps » Manage Apps" via the app dropdown at the top left of Splunk's user interface
+  2. Click the "install app from file" button
+  3. Upload the file by clicking "Choose file" and selecting the app
+  4. Click upload
+  5. Restart Splunk if a dialog asks you to
+
+Configure the Insteon Alert app once you have it installed:
+
+  1. Select "Settings » Alert actions" from the menu at the top right of Splunk
+  2. Click the link namted "Setup Insteon Alert" in the row of the "Execute Insteon command" action
+
+This app also includes a search command for executing Insteon commands. You can run this search using " | insteoncommand".
 
 
 
